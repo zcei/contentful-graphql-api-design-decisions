@@ -1,0 +1,258 @@
+export { future as theme } from 'mdx-deck/themes'
+
+# Dynamic Schema Generation
+## for Changing Data Models
+---
+# There are well-thought GraphQL APIs out there
+
+* https://youtu.be/2It9NofBWYg - Leanne Shapton (Shopify)
+* https://youtu.be/wPPFhcqGcvk - Kyle Daigle (GitHub)
+
+```notes
+Hurts in a good way somehow
+
+Leanne talks about how to tackle the API design.
+Kyle's topic is about the how GitHub internally had to change to build GraphQL
+```
+
+---
+# GitHub / Shopify
+
+* multiple users, but single schema
+* every design decision is on point
+
+```notes
+How you group properties, how to link between them?
+When is it an array, when is it a collection?
+```
+
+---
+# Contentful
+
+* content infrastructre
+* customers define the shape of their content
+
+```notes
+* Ecosystem out there is not to accomodate for our use case
+* Most tooling is for single static schemas
+* Reflection over DB schema, or generate from SDL
+```
+---
+# Shift of responsibility
+
+* historically we decided how the API looks like
+* now we only explain *how the API is derived*
+
+```notes
+REST:
+* we give the shape (sys / fields, items / skip / limit)
+* everything in fields is user respoinsibility
+
+GraphQL:
+* staticly typed
+* we need to inspect the available content types
+* schema is generated from existing knowledge, like linkContentType validation
+```
+
+---
+# Other option
+
+> Let the user describe the schema they want in SDL
+
+* doubled effort when changing the shape
+* hard for us to understand the user intention without new syntax
+
+```notes
+* We dismissed the idea pretty fast
+* Is still an option for later to allow fine-grained tuning of the schema`
+```
+
+---
+# 1. Design Decision
+
+> It's a greenfield *view layer*, not a greenfield app
+
+---
+* at best, no changes to the models are needed
+* the same internal data query adapter is used
+* we can break with expectations where necessary
+
+```notes
+* we operate on data that looks more or less like the current REST responses
+* this format is provided by an internal models library
+
+THE BEST THING
+* we don't need to keep backwards compatibility "at any cost"
+* people have to adapt to the new API either way
+* we can fix annoying little things like protocol-relative urls
+```
+
+---
+# Second Design Decision
+
+> Content Type IDs are used for type names
+
+```notes
+* typenames are PascalCase as a general convention in GraphQL
+```
+---
+import { Image } from 'mdx-deck'
+
+<Image src='images/restaurant-model.png' size='110vh' />
+---
+
+In the example before, everything is obvious: the type name should be `Restaurant`.
+But what about:
+
+---
+<Image src='images/category-model.png' size='120vh' />
+
+---
+* different name and ID
+* name can be changed, ID cannot
+* (auto-generated IDs can be invalid, starting with a number)
+
+Is it `Category` or `FoodCategoryCuisine`?
+
+```notes
+* We analysed all content type ids and names
+* IDs had a bigger percentile failing
+* We started by pascal-casing the names
+* Eventually settled for IDs - those old spaces were ignored for the moment
+```
+
+---
+# Third design descision
+
+> Content Type validations are re-used to derive links between types
+
+---
+<Image src='images/restaurant-type.png' size='150vh' />
+---
+<Image src='images/restaurant-categories-type.png' size='90vh' />
+---
+import { SplitRight } from 'mdx-deck/layouts'
+
+export default SplitRight
+
+## No links defined
+
+<Image src='images/query-without-validations.png'  />
+---
+
+export default SplitRight
+
+## With links defined
+
+<Image src='images/query-with-validations.png'  />
+---
+<Image src='images/restaurant-categories-validations-type.png' size='90vh' />
+
+```notes
+Note how the `items` type did change
+```
+---
+# Fourth design descision
+
+> the generated type namespace is user-owned
+
+---
+
+* fields like `sys` are colocated in the same namespace
+* no `fields` indirection
+* field IDs can be changed
+
+```notes
+* as the field IDs can be changed, we "don't care" about naming clashes
+* of course we do not occupy frequent names
+* this means we don't hoist `sys` properties like `createdAt`
+
+* with every error we try to be as explicit as possible
+```
+
+---
+import { FullScreenCode } from 'mdx-deck/layouts'
+
+export default FullScreenCode
+
+## Useful error messages
+
+```graphql
+{
+  errors: [{
+    message: "Schema generation failed. The type generated from the content type 'blog' contains a field with id 'sys' which is reserved.",
+    extensions: {
+      contentful: {
+        code: 'RESERVED_FIELD_NAME',
+        details: {
+          contentTypeId: 'blog',
+          fieldId: 'sys'
+        },
+        requestId: 'xxx'
+      }
+    }
+  }]
+}
+```
+---
+# Latest design decision
+
+> keep everything in GraphQL land
+
+```notes
+* GraphQL is (or should be) transport independent
+* don't rely on querystring
+```
+---
+
+* we use the `context` to cascade configuration
+* this allows to specify the `locale` as an argument
+
+---
+
+<Image src='images/cascading-locale-query.png' size='150vh' />
+
+---
+
+## Awesome side effects
+
+* switching between *languages* is possible
+* switching between *published* and *preview* content is possible
+
+---
+
+<Image src='images/cascading-locale-override.png' size='150vh' />
+
+---
+
+<Image src='images/cascading-preview-override.png' size='150vh' />
+
+```notes
+* once `preview: true` is used anywhere
+  * the whole HTTP response won't be cached
+  * a preview access token is necessary
+```
+
+---
+
+Try it out today:
+https://graphql.contentful.com
+
+.../content/v1/spaces/$SPACE_ID
+
+.../explore?access_token=$ACCESS_TOKEN
+
+```notes
+* main URL brings you to our documentation
+
+* add /content/v1 to reach the API I've been talking about the last minutes
+* keeps us a clean namespace for other GraphQL APIs
+
+* add /explore with an access token to spin up GraphiQL
+* GraphiQL is exception here to the last design decision
+```
+---
+# The End
+
+* Twitter: `@zcei_ger`
+* Slides: `speakerdeck.com/zcei`

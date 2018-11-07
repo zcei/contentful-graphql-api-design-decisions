@@ -1,0 +1,21 @@
+{
+  "name": "contentful-graphql-api-design-decisions",
+  "version": "1.0.0",
+  "description": "A presentation about the evolution of Contentful's GraphQL API",
+  "main": "deck.mdx",
+  "scripts": {
+    "start": "mdx-deck deck.mdx",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zcei/contentful-graphql-api-design-decisions.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "mdx-deck": "^1.6.4"
+  },
+  "dependencies": {}
+}
